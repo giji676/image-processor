@@ -22,6 +22,11 @@ class BMP:
         unpack_format = "<3l"  # 3 long integers (each 4 bytes)
         endpoints = struct.unpack(unpack_format, endpoint_data[:12])
         return endpoints
+    
+    def read_1_pixel(self, file, size):
+        data = file.read(size//8)
+        unpack_format = "<BBB"
+        return struct.unpack(unpack_format, data)
 
     def load_bmp(self, path):
         with open(path, "rb") as f:
@@ -46,6 +51,7 @@ class BMP:
                 print(dib_header1)
                 print(dib_header2)
                 print(CIEXYZTRIPLE)
+                print(self.read_1_pixel(f, dib_header1[3]))
 
 
 BMP().load_bmp("image.bmp")
