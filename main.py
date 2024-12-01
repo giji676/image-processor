@@ -2,7 +2,9 @@ import struct
 
 
 class BMP:
-    header = None
+    file_header = None
+    dib_header = None
+    pixel_data = None
 
     def __init__(self):
         pass
@@ -47,12 +49,6 @@ class BMP:
 
         return dict(zip(BITMAPV5HEADER_keys, data))
 
-    def extract_CIEXYZTRIPLE(self, endpoint_data):
-        # Unpack the first 12 bytes as 3 LONGs (4 bytes each)
-        unpack_format = "<3I"  # 3 long integers (each 4 bytes)
-        endpoints = struct.unpack(unpack_format, endpoint_data)
-        return endpoints
-
     def read_file_header(self, file, size):
         header = file.read(size)  # File header size: 14
         header_keys = [
@@ -65,51 +61,88 @@ class BMP:
         header_values = struct.unpack("<2sIHHI", header)
         return dict(zip(header_keys, header_values))
 
-    def read_1_pixel(self, file, size):
-        data = file.read(size // 8)
-        unpack_format = "<BBB"
-        return struct.unpack(unpack_format, data)
-
     def load_bmp(self, path):
         with open(path, "rb") as f:
             header_fields = self.read_file_header(f, 14)
             BITMAPINFOHEADER_data = None
 
-            print("FILE HEADER")
+            # print("FILE HEADER")
             for index, (key, value) in enumerate(header_fields.items()):
                 if isinstance(value, bytes):
+                    continue
                     print(key, value.hex())
                 else:
+                    continue
                     print(key, hex(value))
-            print()
+            # print()
 
             f.seek(14)  # DIB header offset: 14
             header_size = int.from_bytes(f.read(4), "little")  # DIB header size: 4
 
-            print("DIB HEADER")
-            print("size", hex(header_size))
+            # print("DIB HEADER")
             if header_size == 40 or header_size == 124:
                 BITMAPINFOHEADER_data = self.read_BITMAPINFOHEADER(f, 40 - 4)
+
+                # We get size from outside the header read file
+                # so it's added in manually at 0th position
+                temp = list(BITMAPINFOHEADER_data.items())
+                temp.insert(0, ("size", header_size))
+                BITMAPINFOHEADER_data = dict(temp)
+
                 for index, (key, value) in enumerate(BITMAPINFOHEADER_data.items()):
                     if isinstance(value, bytes):
+                        continue
                         print(key, value.hex())
                     else:
+                        continue
                         print(key, hex(value))
                 row_size = int((BITMAPINFOHEADER_data["bit_count"] * 
                                 BITMAPINFOHEADER_data["width"]+31) / 32) * 4
                 pixel_array_size = row_size*abs(BITMAPINFOHEADER_data["height"])
-                print(row_size)
-                print(pixel_array_size)
+                # print(row_size)
+                # print(pixel_array_size)
                 f.seek(header_fields["offset"])
 
-                pixels = []
+                pixel_rows = []
                 for row in range(abs(BITMAPINFOHEADER_data["height"])):
                     row_data = f.read(row_size)
-                    pixels.append(row_data[:BITMAPINFOHEADER_data["width"] * 3])  # Exclude padding
+                    pixel_rows.append(row_data[:BITMAPINFOHEADER_data["width"] * 3])  # Exclude padding
+
+                int_pixels = []
 
                 # Print pixel values
-                for row_index, row_pixels in enumerate(pixels):
+                for row_index, row_pixels in enumerate(pixel_rows):
                     for col in range(0, len(row_pixels), 3):
-                        print(row_pixels[col:col+3])  # Print RGB values
+                        # print(row_pixels[col:col+3])
+                        int_row = list(row_pixels[col:col+3])
+                        int_pixels.append(int_row)
 
-BMP().load_bmp("image.bmp")
+                self.file_header = header_fields
+                self.dib_header = BITMAPINFOHEADER_data
+                self.pixel_data = pixel_rows
+                self.int_pixels = int_pixels
+
+    def save_bmp(self, path):
+        with open(path, "wb") as f:
+            format_string = "<2sIHHI"
+            values = list(self.file_header.values())
+            test = struct.pack(format_string, *values)
+            f.write(test)
+
+            format_string = "<IiiHHIIiiII"
+            values = list(self.dib_header.values())
+            test = struct.pack(format_string, *values)
+            f.write(test)
+
+            for row in self.pixel_data:
+                if len(row) % 4 != 0:
+                    row += b"\x00" * (len(row) % 4)
+                print(len(row))
+                f.write(row)
+
+
+
+bmp_image = BMP()
+bmp_image.load_bmp("image.bmp")
+bmp_image.save_bmp("test.bmp")
+
