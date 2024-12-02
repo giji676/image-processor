@@ -66,16 +66,6 @@ class BMP:
             header_fields = self.read_file_header(f, 14)
             BITMAPINFOHEADER_data = None
 
-            # print("FILE HEADER")
-            for index, (key, value) in enumerate(header_fields.items()):
-                if isinstance(value, bytes):
-                    continue
-                    print(key, value.hex())
-                else:
-                    continue
-                    print(key, hex(value))
-            # print()
-
             f.seek(14)  # DIB header offset: 14
             header_size = int.from_bytes(f.read(4), "little")  # DIB header size: 4
 
@@ -89,18 +79,10 @@ class BMP:
                 temp.insert(0, ("size", header_size))
                 BITMAPINFOHEADER_data = dict(temp)
 
-                for index, (key, value) in enumerate(BITMAPINFOHEADER_data.items()):
-                    if isinstance(value, bytes):
-                        continue
-                        print(key, value.hex())
-                    else:
-                        continue
-                        print(key, hex(value))
                 row_size = int((BITMAPINFOHEADER_data["bit_count"] * 
                                 BITMAPINFOHEADER_data["width"]+31) / 32) * 4
                 pixel_array_size = row_size*abs(BITMAPINFOHEADER_data["height"])
-                # print(row_size)
-                # print(pixel_array_size)
+
                 f.seek(header_fields["offset"])
 
                 pixel_rows = []
@@ -110,7 +92,6 @@ class BMP:
 
                 int_pixels = []
 
-                # Print pixel values
                 for row_index, row_pixels in enumerate(pixel_rows):
                     for col in range(0, len(row_pixels), 3):
                         # print(row_pixels[col:col+3])
@@ -137,12 +118,72 @@ class BMP:
             for row in self.pixel_data:
                 if len(row) % 4 != 0:
                     row += b"\x00" * (len(row) % 4)
-                print(len(row))
                 f.write(row)
 
+    def construct_image(self, path, pixels):
+        # expects 2d pixels array with RGB list as elements
+        # [[(255,255,255), (255,0,0)],
+        #  [(0,255,0), (0,0,255)]]
+
+        header_keys = [
+            "signature",
+            "size",
+            "reserve1",
+            "reserve2",
+            "offset"
+        ]
+        header = [b"BM"]
+        height, width = len(pixels), len(pixels[0])
+        pixels_size = width*3 # width * 3 values (RGB)
+        pixels_size = (pixels_size + (pixels_size%4))*height # Includes padding
+
+        size = 14 + 40 + pixels_size
+        header.append(size)
+        header.append(0) # Reserve 1
+        header.append(0) # Reserve 2
+        header.append(14+40) # Offset
+
+        standard_dpi = 96
+        m_to_inch = 39.3701
+        res_x = round(standard_dpi * m_to_inch)
+        res_y = round(standard_dpi * m_to_inch)
+
+        dib_header = [40] # Size of the header - BITMAPINFOHEADER version - 40
+        dib_header.append(width)
+        dib_header.append(height)
+        dib_header.append(1) # Planes - has to be 1
+        dib_header.append(24) # Bits per pixel - usually 24
+        dib_header.append(0) # Compression - 0 for none
+        dib_header.append(pixels_size)
+        dib_header.append(res_x) # Horizontal res
+        dib_header.append(res_y) # Vertical res
+        dib_header.append(0) # Num of colors used
+        dib_header.append(0) # Num of important colors
+
+
+        with open(path, "wb") as f:
+            format_string = "<2sIHHI"
+            test = struct.pack(format_string, *header)
+            f.write(test)
+
+            format_string = "<IiiHHIIiiII"
+            test = struct.pack(format_string, *dib_header)
+            f.write(test)
+
+            for row in pixels:
+                temp = b""
+                for col in row:
+                    temp += struct.pack(f"{len(col)}B", *col)
+
+                if len(temp) % 4 != 0:
+                    temp += b"\x00" * (len(temp) % 4)
+                    f.write(temp)
 
 
 bmp_image = BMP()
 bmp_image.load_bmp("image.bmp")
 bmp_image.save_bmp("test.bmp")
-
+pixels = [[(128,128,128), (128,0,0)],
+          [(0,128,0), (0,0,128)],
+          [(128,128,0), (128,0,128)]]
+bmp_image.construct_image("2test.bmp", pixels)
