@@ -88,18 +88,17 @@ class BMP:
                 f.seek(header_fields["offset"])
 
                 pixel_rows = []
-                for row in range(abs(BITMAPINFOHEADER_data["height"])):
-                    row_data = f.read(row_size)
-                    pixel_rows.append(row_data[:BITMAPINFOHEADER_data["width"] * 3])  # Exclude padding
-
                 int_pixels = []
+                for _ in range(abs(BITMAPINFOHEADER_data["height"])):
+                    row_data = f.read(row_size)
+                    pixel_row = row_data[:BITMAPINFOHEADER_data["width"] * 3]
+                    pixel_rows.append(pixel_row)  # Exclude padding
 
-                for row_index, row_pixels in enumerate(pixel_rows):
                     int_row = []
-                    for col in range(0, len(row_pixels), 3):
-                        # print(row_pixels[col:col+3])
-                        int_row.append(list(row_pixels[col:col+3]))
+                    for col in range(0, len(pixel_row), 3):
+                        int_row.append(list(pixel_row[col:col+3]))
                     int_pixels.append(int_row)
+
 
                 self.file_header = header_fields
                 self.dib_header = BITMAPINFOHEADER_data
