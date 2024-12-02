@@ -1,10 +1,12 @@
 import struct
+import sys
 
 
 class BMP:
     file_header = None
     dib_header = None
     pixel_data = None
+    int_pixels = None
 
     def __init__(self):
         pass
@@ -153,9 +155,6 @@ class BMP:
         dib_header.append(res_y) # Vertical res
         dib_header.append(0) # Num of colors used
         dib_header.append(0) # Num of important colors
-        print(header)
-        print(dib_header)
-
 
         with open(path, "wb") as f:
             format_string = "<2sIHHI"
@@ -198,12 +197,17 @@ class BMP:
         self.int_pixels = int_pixels
         return self.int_pixels
 
+if __name__ == "__main__":
+    bmp_image = BMP()
+    output_name = "gray.bmp"
 
-bmp_image = BMP()
-# pixels = [[(128,128,128), (128,0,0)],
-#          [(0,128,0), (0,0,128)],
-#          [(128,128,0), (128,0,128)]]
-# bmp_image.construct_image("2test.bmp", pixels)
-bmp_image.load_bmp("image3.bmp")
-gray = bmp_image.grayscale(bmp_image.int_pixels)
-bmp_image.construct_image("gray.bmp", gray)
+    if len(sys.argv) >= 2:
+        bmp_image.load_bmp(sys.argv[1])
+    else:
+        print("No input file provided")
+        sys.exit()
+
+    if len(sys.argv) == 2:
+        output_name = sys.argv[2]
+    gray = bmp_image.grayscale(bmp_image.int_pixels)
+    bmp_image.construct_image(output_name, gray)
