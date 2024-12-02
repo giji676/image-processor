@@ -206,7 +206,7 @@ if __name__ == "__main__":
         print("No input file provided")
         sys.exit()
 
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
         output_name = sys.argv[2]
     gray = bmp_image.grayscale(bmp_image.int_pixels)
     bmp_image.construct_image(output_name, gray)
