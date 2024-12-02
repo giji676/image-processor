@@ -93,10 +93,11 @@ class BMP:
                 int_pixels = []
 
                 for row_index, row_pixels in enumerate(pixel_rows):
+                    int_row = []
                     for col in range(0, len(row_pixels), 3):
                         # print(row_pixels[col:col+3])
-                        int_row = list(row_pixels[col:col+3])
-                        int_pixels.append(int_row)
+                        int_row.append(list(row_pixels[col:col+3]))
+                    int_pixels.append(int_row)
 
                 self.file_header = header_fields
                 self.dib_header = BITMAPINFOHEADER_data
@@ -125,13 +126,6 @@ class BMP:
         # [[(255,255,255), (255,0,0)],
         #  [(0,255,0), (0,0,255)]]
 
-        header_keys = [
-            "signature",
-            "size",
-            "reserve1",
-            "reserve2",
-            "offset"
-        ]
         header = [b"BM"]
         height, width = len(pixels), len(pixels[0])
         pixels_size = width*3 # width * 3 values (RGB)
@@ -159,6 +153,8 @@ class BMP:
         dib_header.append(res_y) # Vertical res
         dib_header.append(0) # Num of colors used
         dib_header.append(0) # Num of important colors
+        print(header)
+        print(dib_header)
 
 
         with open(path, "wb") as f:
@@ -177,13 +173,37 @@ class BMP:
 
                 if len(temp) % 4 != 0:
                     temp += b"\x00" * (len(temp) % 4)
-                    f.write(temp)
+                f.write(temp)
+
+    def grayscale(self, pixels):
+        new_pix = []
+        for row in pixels:
+            temp = []
+            for col in row:
+                gray_val = int(0.299*col[0] + 0.587*col[1] + 0.114*col[2]) # RGB
+                temp.append((gray_val, gray_val, gray_val))
+            new_pix.append(temp)
+        return new_pix
+
+    def hex_to_pixels(self, image): # ==== MIGHT BE WRONG ====
+        # Turn hex RGB values to ints
+        int_pixels = []
+
+        for row_index, row_pixels in enumerate(image):
+            temp = []
+            for col in range(0, len(row_pixels), 3):
+                # print(row_pixels[col:col+3])
+                temp.append((list(row_pixels[col:col+3])))
+            int_pixels.append(temp)
+        self.int_pixels = int_pixels
+        return self.int_pixels
 
 
 bmp_image = BMP()
-bmp_image.load_bmp("image.bmp")
-bmp_image.save_bmp("test.bmp")
-pixels = [[(128,128,128), (128,0,0)],
-          [(0,128,0), (0,0,128)],
-          [(128,128,0), (128,0,128)]]
-bmp_image.construct_image("2test.bmp", pixels)
+# pixels = [[(128,128,128), (128,0,0)],
+#          [(0,128,0), (0,0,128)],
+#          [(128,128,0), (128,0,128)]]
+# bmp_image.construct_image("2test.bmp", pixels)
+bmp_image.load_bmp("image3.bmp")
+gray = bmp_image.grayscale(bmp_image.int_pixels)
+bmp_image.construct_image("gray.bmp", gray)
